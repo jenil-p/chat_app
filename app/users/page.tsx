@@ -41,7 +41,12 @@ export default function UsersPage() {
                 onChange={e => setSearch(e.target.value)}
             />
 
-            {filtered.length === 0 && <p>No users found.</p>}
+            {filtered.length === 0 && (
+                <div style={{ padding: "20px", color: "gray" }}>
+                    <h4>No users found 🔍</h4>
+                    <p>Try searching with a different name.</p>
+                </div>
+            )}
 
             {filtered.map(u => (
                 <div

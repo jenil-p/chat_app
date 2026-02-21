@@ -9,6 +9,7 @@ export default defineSchema({
         name: v.string(),
         email: v.string(),
         image: v.optional(v.string()),
+        lastSeen: v.optional(v.number()),
     }).index("by_clerkId", ["clerkId"]),
 
     // chat mapping 1-1 user
