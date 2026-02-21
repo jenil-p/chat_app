@@ -29,4 +29,13 @@ export default defineSchema({
     })
         .index("by_conversation", ["conversationId"])
         .index("by_conversation_createdAt", ["conversationId", "createdAt"]),
+
+    // typing table
+    typing: defineTable({
+        conversationId: v.id("conversations"),
+        userId: v.id("users"),
+        lastTypedAt: v.number(),
+    })
+        .index("by_conversation", ["conversationId"])
+        .index("by_conversation_user", ["conversationId", "userId"]),
 });

@@ -19,6 +19,32 @@ export default function ChatPage() {
         user ? { clerkId: user.id } : "skip"
     );
 
+    const updateTyping = useMutation(
+        api.typing.mutations.updateTyping
+    );
+
+    const handleTyping = () => {
+        if (!selectedConversation || !currentUser) return;
+
+        updateTyping({
+            conversationId: selectedConversation,
+            userId: currentUser._id,
+        });
+    };
+
+    const typingUsers = useQuery(
+        api.typing.queries.getTypingUsers,
+        selectedConversation
+            ? { conversationId: selectedConversation }
+            : "skip"
+    );
+
+    const activeTypers =
+        typingUsers?.filter(t =>
+            t.userId !== currentUser?._id &&
+            now - t.lastTypedAt < 2000
+        ) || [];
+
     const conversations = useQuery(
         api.conversations.queries.getUserConversations,
         currentUser ? { userId: currentUser._id } : "skip"
@@ -36,7 +62,7 @@ export default function ChatPage() {
     useEffect(() => {
         const interval = setInterval(() => {
             setNow(Date.now());
-        }, 2000);
+        }, 1000);
 
         return () => clearInterval(interval);
     }, []);
@@ -142,8 +168,10 @@ export default function ChatPage() {
 
                         <input
                             value={message}
-                            onChange={e => setMessage(e.target.value)}
-                            placeholder="Type message..."
+                            onChange={e => {
+                                setMessage(e.target.value);
+                                handleTyping();
+                            }}
                         />
 
                         <button
@@ -161,6 +189,13 @@ export default function ChatPage() {
                     </>
                 )}
             </div>
+            {activeTypers.length > 0 && (
+                <div style={{ fontStyle: "italic", color: "gray" }}>
+                    {activeTypers.length === 1
+                        ? "Typing..."
+                        : "Multiple people typing..."}
+                </div>
+            )}
         </div>
     );
 }
