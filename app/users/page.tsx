@@ -10,20 +10,22 @@ export default function UsersPage() {
     const [search, setSearch] = useState("");
 
     const users = useQuery(
-        api.users.getUsersExceptMe,
+        api.users.queries.getUsersExceptMe,
         user ? { clerkId: user.id } : "skip"
     );
 
     const currentUser = useQuery(
-        api.users.getCurrentUser,
+        api.users.queries.getCurrentUser,
         user ? { clerkId: user.id } : "skip"
     );
 
     const createConversation = useMutation(
-        api.conversations.getOrCreateConversation
+        api.conversations.mutations.getOrCreateConversation
     );
 
     if (!users) return <div>Finding users...Or may be not found any if after sometim does not appear anyone here. it means no one is ready to talk to you. Go home Buddy!! </div>;
+
+    if (!currentUser) return <div>Current user is loading or No current user...</div>;
 
     const filtered = users.filter(u =>
         u.name.toLowerCase().includes(search.toLowerCase())

@@ -8,7 +8,7 @@ import Link from "next/link";
 
 export default function Home() {
   const { user } = useUser();
-  const createUser = useMutation(api.users.createUser);
+  const createUser = useMutation(api.users.mutations.createUser);
 
   useEffect(() => {
     if (user) {
