@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../convex/_generated/api";
@@ -14,6 +14,10 @@ export default function ChatPage() {
 
     const [now, setNow] = useState(Date.now());
 
+    const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+    const [showScrollButton, setShowScrollButton] = useState(false);
+
     const currentUser = useQuery(
         api.users.queries.getCurrentUser,
         user ? { clerkId: user.id } : "skip"
@@ -22,6 +26,18 @@ export default function ChatPage() {
     const updateTyping = useMutation(
         api.typing.mutations.updateTyping
     );
+
+    const isUserNearBottom = () => {
+        const container = messagesContainerRef.current;
+        if (!container) return true;
+
+        const threshold = 100; // this is says that till 100 px is counted as near bottom...
+
+        return (
+            container.scrollHeight - container.scrollTop - container.clientHeight <
+            threshold
+        );
+    };
 
     const handleTyping = () => {
         if (!selectedConversation || !currentUser) return;
@@ -64,13 +80,26 @@ export default function ChatPage() {
     );
 
     useEffect(() => {
-        if (!selectedConversation || !currentUser) return;
+        if (!messages || !selectedConversation || !currentUser) return;
 
-        markAsRead({
-            conversationId: selectedConversation,
-            userId: currentUser._id,
-        });
-    }, [selectedConversation]);
+        const container = messagesContainerRef.current;
+        if (!container) return;
+
+        if (isUserNearBottom()) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            setShowScrollButton(false);
+
+            // Mark as read
+            markAsRead({
+                conversationId: selectedConversation,
+                userId: currentUser._id,
+            });
+
+        } else {
+            setShowScrollButton(true);
+        }
+
+    }, [messages?.length]);
 
 
     useEffect(() => {
@@ -94,6 +123,47 @@ export default function ChatPage() {
 
         return () => clearInterval(interval);
     }, [currentUser?._id]);
+
+    // if new message arrives and we are near bottom auto matic scrll
+    useEffect(() => {
+        if (!messages) return;
+
+        const container = messagesContainerRef.current;
+        if (!container) return;
+
+        if (isUserNearBottom()) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            setShowScrollButton(false);
+        } else {
+            setShowScrollButton(true);
+        }
+
+    }, [messages?.length]);
+
+    // scroll manually if we are far from bottom
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            if (
+                isUserNearBottom() &&
+                selectedConversation &&
+                currentUser
+            ) {
+                setShowScrollButton(false);
+
+                markAsRead({
+                    conversationId: selectedConversation,
+                    userId: currentUser._id,
+                });
+            }
+        };
+
+        container.addEventListener("scroll", handleScroll);
+        return () => container.removeEventListener("scroll", handleScroll);
+
+    }, [selectedConversation, currentUser]);
 
     const sendMessage = useMutation(api.messages.mutations.sendMessage);
 
@@ -159,7 +229,8 @@ export default function ChatPage() {
             </div>
 
             {/* Chat Area */}
-            <div style={{ flex: 1, padding: "20px" }}>
+            {/* Chat Area */}
+            <div style={{ flex: 1, padding: "20px", position: "relative" }}>
                 {!selectedConversation && (
                     <div style={{ textAlign: "center", marginTop: "100px", color: "gray" }}>
                         <h3>Welcome to Chat 💬</h3>
@@ -170,27 +241,51 @@ export default function ChatPage() {
 
                 {selectedConversation && (
                     <>
-                        <div style={{ height: "70vh", overflowY: "auto" }}>
+                        <div
+                            ref={messagesContainerRef}
+                            style={{ height: "70vh", overflowY: "auto" }}
+                        >
                             {messages && messages.length === 0 && (
                                 <div style={{ textAlign: "center", marginTop: "50px", color: "gray" }}>
                                     <h4>No messages yet 📨</h4>
                                     <p>Say hello and start the conversation!</p>
                                 </div>
                             )}
+
                             {messages?.map(m => (
                                 <div key={m._id}>
-                                    <div>
-                                        <b>
-                                            {m.senderId === currentUser._id ? "You" : "Them"}:
-                                        </b>{" "}
-                                        {m.content}
-                                        <div className="text-gray-600 mb-5" style={{ fontSize: "12px", color: "gray" }}>
-                                            {formatTimestamp(m.createdAt)}
-                                        </div>
+                                    <b>
+                                        {m.senderId === currentUser._id ? "You" : "Them"}:
+                                    </b>{" "}
+                                    {m.content}
+                                    <div style={{ fontSize: "12px", color: "gray" }}>
+                                        {formatTimestamp(m.createdAt)}
                                     </div>
                                 </div>
                             ))}
+
+                            <div ref={messagesEndRef} />
                         </div>
+
+                        {showScrollButton && (
+                            <button
+                                onClick={() => {
+                                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                                    setShowScrollButton(false);
+                                }}
+                                style={{
+                                    position: "absolute",
+                                    bottom: "100px",
+                                    right: "40px",
+                                    padding: "8px 12px",
+                                    backgroundColor: "black",
+                                    color: "white",
+                                    borderRadius: "20px",
+                                }}
+                            >
+                                ↓ New messages
+                            </button>
+                        )}
 
                         <input
                             value={message}
@@ -215,13 +310,6 @@ export default function ChatPage() {
                     </>
                 )}
             </div>
-            {activeTypers.length > 0 && (
-                <div style={{ fontStyle: "italic", color: "gray" }}>
-                    {activeTypers.length === 1
-                        ? "Typing..."
-                        : "Multiple people typing..."}
-                </div>
-            )}
         </div>
     );
 }
