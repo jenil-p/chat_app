@@ -59,6 +59,20 @@ export default function ChatPage() {
         api.users.mutations.updateLastSeen
     );
 
+    const markAsRead = useMutation(
+        api.conversationReads.mutations.markAsRead
+    );
+
+    useEffect(() => {
+        if (!selectedConversation || !currentUser) return;
+
+        markAsRead({
+            conversationId: selectedConversation,
+            userId: currentUser._id,
+        });
+    }, [selectedConversation]);
+
+
     useEffect(() => {
         const interval = setInterval(() => {
             setNow(Date.now());
@@ -122,6 +136,18 @@ export default function ChatPage() {
                                     }}
                                 />
                                 <strong>{c.otherUser?.name}</strong>
+                                {c.unreadCount > 0 && (
+                                    <span style={{
+                                        backgroundColor: "red",
+                                        color: "white",
+                                        borderRadius: "50%",
+                                        padding: "4px 8px",
+                                        fontSize: "12px",
+                                        marginLeft: "8px",
+                                    }}>
+                                        {c.unreadCount}
+                                    </span>
+                                )}
                             </div>
 
                             <p>

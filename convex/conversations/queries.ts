@@ -25,6 +25,34 @@ export const getUserConversations = query({
 
             const otherUser = await ctx.db.get(otherUserId);
 
+            const readInfo = await ctx.db
+                .query("conversationReads")
+                .withIndex("by_conversation_user", q =>
+                    q.eq("conversationId", convo._id)
+                        .eq("userId", args.userId)
+                )
+                .unique();
+
+            const unreadMessages = await ctx.db
+                .query("messages")
+                .withIndex("by_conversation_createdAt", q =>
+                    q.eq("conversationId", convo._id)
+                )
+                .filter(q =>
+                    q.and(
+                        // Only messages from the other user
+                        q.neq(q.field("senderId"), args.userId),
+
+                        // Only messages after lastReadAt
+                        readInfo
+                            ? q.gt(q.field("createdAt"), readInfo.lastReadAt)
+                            : true
+                    )
+                )
+                .collect();
+
+            const unreadCount = unreadMessages.length;
+
             const lastMessage = await ctx.db
                 .query("messages")
                 .withIndex("by_conversation_createdAt", q =>
@@ -37,6 +65,7 @@ export const getUserConversations = query({
                 conversationId: convo._id,
                 otherUser,
                 lastMessage,
+                unreadCount,
             });
         }
 

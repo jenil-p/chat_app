@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as conversationReads_mutations from "../conversationReads/mutations.js";
 import type * as conversations_mutations from "../conversations/mutations.js";
 import type * as conversations_queries from "../conversations/queries.js";
 import type * as messages_mutations from "../messages/mutations.js";
@@ -24,6 +25,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "conversationReads/mutations": typeof conversationReads_mutations;
   "conversations/mutations": typeof conversations_mutations;
   "conversations/queries": typeof conversations_queries;
   "messages/mutations": typeof messages_mutations;
