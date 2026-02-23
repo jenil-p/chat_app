@@ -63,7 +63,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-gray-50 overflow-hidden font-sans">
+    <div className="flex h-[95vh] w-full bg-gray-50 overflow-hidden font-sans">
       <Sidebar
         currentUser={currentUser}
         selectedConversation={selectedConversation}
