@@ -6,6 +6,7 @@ export const updateTyping = mutation({
   args: {
     conversationId: v.id("conversations"),
     userId: v.id("users"),
+    stop: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -17,6 +18,10 @@ export const updateTyping = mutation({
       .unique();
 
     let timeToSet = Date.now();
+
+    if(args.stop){
+      timeToSet = 0;
+    }
 
     if (existing) {
       await ctx.db.patch(existing._id, {
