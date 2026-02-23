@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
-import { useUser, UserButton } from "@clerk/nextjs";
-import { useMutation } from "convex/react";
+import { useState, useEffect } from "react";
+import { useUser, RedirectToSignIn } from "@clerk/nextjs";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
-import Link from "next/link";
+import { Id } from "../convex/_generated/dataModel";
+import Sidebar from "@/app/components/Sidebar";
+import ChatArea from "@/app/components/ChatArea";
+import LoadingScreen from "./components/LoadingScreen";
 
-export default function Home() {
-  const { user } = useUser();
+export default function App() {
+  const { user, isLoaded } = useUser();
+  const [selectedConversation, setSelectedConversation] = useState<Id<"conversations"> | null>(null);
+
   const createUser = useMutation(api.users.mutations.createUser);
+  const updateLastSeen = useMutation(api.users.mutations.updateLastSeen);
 
+  const currentUser = useQuery(api.users.queries.getCurrentUser, user ? { clerkId: user.id } : "skip");
+
+  // Sync user info to Convex
   useEffect(() => {
     if (user) {
       createUser({
@@ -21,19 +30,50 @@ export default function Home() {
     }
   }, [user, createUser]);
 
-    if (!user) return <div>No user found. If you are one then identify your self here <Link className="underline text-blue-600" href="/sign-in">
-      Sign In
-    </Link> </div>;
+  // Handle global online presence
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const updatePresence = () => {
+      if (document.visibilityState === "visible") {
+        updateLastSeen({ userId: currentUser._id });
+      }
+    };
+
+    updatePresence();
+    const interval = setInterval(updatePresence, 4000);
+    document.addEventListener("visibilitychange", updatePresence);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", updatePresence);
+    };
+  }, [currentUser?._id, updateLastSeen]);
+
+  if (!isLoaded) {
+    return <LoadingScreen message="Connecting..." />;
+  }
+
+  if (!user) {
+    return <RedirectToSignIn />;
+  }
+
+  if (!currentUser) {
+    return <LoadingScreen message="Loading your chats..." />;
+  }
 
   return (
-    <div>
-      <h1>Welcome {user.fullName}</h1>
-      <img src={user.imageUrl} width={50} />
-      
-      {/* Logout + Profile */}
-      <UserButton afterSignOutUrl="/sign-in" />
+    <div className="flex h-screen w-full bg-gray-50 overflow-hidden font-sans">
+      <Sidebar
+        currentUser={currentUser}
+        selectedConversation={selectedConversation}
+        setSelectedConversation={setSelectedConversation}
+      />
+      <ChatArea
+        currentUser={currentUser}
+        selectedConversation={selectedConversation}
+        setSelectedConversation={setSelectedConversation}
+      />
     </div>
   );
 }
-
-
