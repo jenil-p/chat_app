@@ -79,6 +79,10 @@ export default function ChatPage() {
         api.conversationReads.mutations.markAsRead
     );
 
+    const deleteMessage = useMutation(
+        api.messages.mutations.deleteMessage
+    );
+
     useEffect(() => {
         if (!messages || !selectedConversation || !currentUser) return;
 
@@ -229,7 +233,6 @@ export default function ChatPage() {
             </div>
 
             {/* Chat Area */}
-            {/* Chat Area */}
             <div style={{ flex: 1, padding: "20px", position: "relative" }}>
                 {!selectedConversation && (
                     <div style={{ textAlign: "center", marginTop: "100px", color: "gray" }}>
@@ -257,7 +260,34 @@ export default function ChatPage() {
                                     <b>
                                         {m.senderId === currentUser._id ? "You" : "Them"}:
                                     </b>{" "}
-                                    {m.content}
+
+                                    {m.isDeleted ? (
+                                        <i style={{ color: "gray" }}>
+                                            This message was deleted
+                                        </i>
+                                    ) : (
+                                        m.content
+                                    )}
+
+                                    {m.senderId === currentUser._id && !m.isDeleted && (
+                                        <button
+                                            onClick={() =>
+                                                deleteMessage({
+                                                    messageId: m._id,
+                                                    userId: currentUser._id,
+                                                })
+                                            }
+                                            style={{
+                                                marginLeft: "10px",
+                                                fontSize: "10px",
+                                                color: "red",
+                                                cursor: "pointer",
+                                            }}
+                                        >
+                                            Delete
+                                        </button>
+                                    )}
+
                                     <div style={{ fontSize: "12px", color: "gray" }}>
                                         {formatTimestamp(m.createdAt)}
                                     </div>

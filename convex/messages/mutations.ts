@@ -15,3 +15,26 @@ export const sendMessage = mutation({
     });
   },
 });
+
+// delegte the essage
+export const deleteMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+
+    if (!message) return;
+
+    // only sender can delete
+    if (message.senderId !== args.userId) {
+      throw new Error("Not authorized to delete this message");
+    }
+
+    await ctx.db.patch(args.messageId, {
+      isDeleted: true,
+      content: "",
+    });
+  },
+});
