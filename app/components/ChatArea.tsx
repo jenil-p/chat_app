@@ -73,7 +73,7 @@ export default function ChatArea({ currentUser, selectedConversation, setSelecte
             content: message.trim(),
         });
 
-        updateTyping({ conversationId: selectedConversation, userId: currentUser._id });
+        updateTyping({ conversationId: selectedConversation, userId: currentUser._id, stop: true });
         setMessage("");
     };
 

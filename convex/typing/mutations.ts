@@ -12,18 +12,21 @@ export const updateTyping = mutation({
       .query("typing")
       .withIndex("by_conversation_user", q =>
         q.eq("conversationId", args.conversationId)
-         .eq("userId", args.userId)
+          .eq("userId", args.userId)
       )
       .unique();
 
+    let timeToSet = Date.now();
+
     if (existing) {
       await ctx.db.patch(existing._id, {
-        lastTypedAt: Date.now(),
+        lastTypedAt: timeToSet,
       });
     } else {
       await ctx.db.insert("typing", {
-        ...args,
-        lastTypedAt: Date.now(),
+        conversationId: args.conversationId,
+        userId: args.userId,
+        lastTypedAt: timeToSet,
       });
     }
   },
