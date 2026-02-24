@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Send, ArrowLeft, ChevronDown } from "lucide-react";
+import { Search, SendHorizontal, ArrowLeft, ChevronDown } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -20,6 +20,7 @@ export default function ChatArea({ currentUser, selectedConversation, setSelecte
 
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
     const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const messages = useQuery(api.messages.queries.getMessages, selectedConversation ? { conversationId: selectedConversation } : "skip");
     const typingUsers = useQuery(api.typing.queries.getTypingUsers, selectedConversation ? { conversationId: selectedConversation } : "skip");
@@ -30,7 +31,7 @@ export default function ChatArea({ currentUser, selectedConversation, setSelecte
     const markAsRead = useMutation(api.conversationReads.mutations.markAsRead);
 
     const activeChatData = conversations?.find(c => c.conversationId === selectedConversation);
-    const activeTypers = typingUsers?.filter(t => t.userId !== currentUser?._id && now - t.lastTypedAt < 2000) || [];
+    const activeTypers = typingUsers?.filter(t => t.userId !== currentUser?._id && now - t.lastTypedAt < 5000) || [];
 
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -63,9 +64,32 @@ export default function ChatArea({ currentUser, selectedConversation, setSelecte
         }
     };
 
-    const handleSendMessage = (e?: React.FormEvent) => {
+    const handleTyping = (value: string) => {
+        setMessage(value);
+
+        if (!selectedConversation) return;
+
+        // call mutation for typing
+        updateTyping({ conversationId: selectedConversation, userId: currentUser._id });
+
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+        // stop after 3 seconds
+        typingTimeoutRef.current = setTimeout(() => {
+            updateTyping({ conversationId: selectedConversation, userId: currentUser._id, stop: true });
+        }, 3000);
+    };
+
+
+    const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!message.trim() || !selectedConversation) return;
+
+        // clear time out that is runnign
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+        // stop the dots and then send message...
+        await updateTyping({ conversationId: selectedConversation, userId: currentUser._id, stop: true });
 
         sendMessage({
             conversationId: selectedConversation,
@@ -73,9 +97,17 @@ export default function ChatArea({ currentUser, selectedConversation, setSelecte
             content: message.trim(),
         });
 
-        updateTyping({ conversationId: selectedConversation, userId: currentUser._id, stop: true });
         setMessage("");
     };
+
+    useEffect(() => {
+        return () => {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            if (selectedConversation) {
+                updateTyping({ conversationId: selectedConversation, userId: currentUser._id, stop: true });
+            }
+        };
+    }, [selectedConversation]);
 
     if (!selectedConversation) {
         return (
@@ -149,13 +181,10 @@ export default function ChatArea({ currentUser, selectedConversation, setSelecte
                     placeholder="Type a message"
                     className="flex-1 bg-white rounded-full py-3 px-5 focus:outline-none shadow-sm"
                     value={message}
-                    onChange={e => {
-                        setMessage(e.target.value);
-                        updateTyping({ conversationId: selectedConversation, userId: currentUser._id });
-                    }}
+                    onChange={e => handleTyping(e.target.value)}
                 />
-                <button type="submit" disabled={!message.trim()} className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 disabled:opacity-50 transition">
-                    <Send className="w-5 h-5 ml-1" />
+                <button type="submit" disabled={!message.trim()} className="flex justify-center items-center bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 disabled:opacity-50 transition">
+                    <SendHorizontal className="w-5 h-5" />
                 </button>
             </form>
         </div>

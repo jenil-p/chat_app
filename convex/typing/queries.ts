@@ -6,11 +6,16 @@ export const getTypingUsers = query({
     conversationId: v.id("conversations"),
   },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const TYPING_TIMEOUT_MS = 5000;
+    const cutoff = Date.now() - TYPING_TIMEOUT_MS;
+
+    const all = await ctx.db
       .query("typing")
       .withIndex("by_conversation", q =>
         q.eq("conversationId", args.conversationId)
       )
       .collect();
+
+    return all.filter(t => t.lastTypedAt > cutoff);
   },
 });
