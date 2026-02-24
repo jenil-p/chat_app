@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Chat app-Local",
+  title: "Chat app",
   description: "this is a chatting application.",
 };
 
