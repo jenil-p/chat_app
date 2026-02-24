@@ -90,7 +90,7 @@ export default function ChatArea({ currentUser, selectedConversation, setSelecte
     }
 
     return (
-        <div className="flex-1 flex flex-col bg-[#322e27] relative">
+        <div className="flex-1 flex flex-col bg-[#ffffe6] relative">
             {/* name and profile pic */}
             <div className="bg-white px-4 py-3 flex items-center gap-4 border-b border-gray-200 sticky top-0 z-10">
                 <button onClick={() => setSelectedConversation(null)} className="md:hidden text-gray-600 hover:text-gray-900">
